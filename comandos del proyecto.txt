@@ -1,0 +1,452 @@
+Proyecto redes comandos:
+
+clave RouterCentral: proyectoempresa13
+clave SwitchCentral: swCentralTr
+clave switch administración:swAdmin10
+clave switch soporte_tecnico: swSoporteT20
+clave switch ventas_marketing: swVentasM30
+clave switch servicios_generales: swServiciosG40
+
+AccessPoint:
+
+ap_administracion: WPA2-PSK -> PSK Pass Phrase: wpa10cetorpad
+ap_soporte_tecnico: WPA2-PSK -> PSK Pass Phrase: wpa20spevomst
+ap_ventas_marketing: WPA2-PSK -> PSK Pass Phrase: wpa30secprovm
+ap_servicios_generales: WPA2-PSK -> PSK Pass Phrase: wpa40secursg
+ap_invitados_wifi: WPA2-PSK -> PSK Pass Phrase: wpa50protec
+
+##RouterCentral##
+
+ena
+conf t
+
+int GigabitEthernet0/0
+no shut
+exit
+
+--Configuración de subinterfaces--
+
+**administracion**
+int GigabitEthernet0/0.10
+encapsulation dot1q 10
+ip address 192.168.10.1 255.255.255.240
+no shutdown
+exit
+
+**soporte_tecnico**
+int GigabitEthernet0/0.20
+encapsulation dot1q 20
+ip address 192.168.10.17 255.255.255.240
+no shutdown
+exit
+
+**ventas_marketing**
+int GigabitEthernet0/0.30
+encapsulation dot1q 30
+ip address 192.168.10.33 255.255.255.248
+no shutdown
+exit
+
+**servicios_generales**
+int GigabitEthernet0/0.40
+encapsulation dot1q 40
+ip address 192.168.10.41 255.255.255.248
+no shutdown
+exit
+
+**invitados_wifi**
+int GigabitEthernet0/0.50
+encapsulation dot1q 50
+ip address 192.168.10.49 255.255.255.240
+no shutdown
+exit
+
+--Configuración del DHCP--
+
+Gateways:
+ip dhcp excluded-address 192.168.10.1
+ip dhcp excluded-address 192.168.10.17
+ip dhcp excluded-address 192.168.10.33
+ip dhcp excluded-address 192.168.10.41
+ip dhcp excluded-address 192.168.10.49
+
+**administracion**
+ip dhcp pool administración
+network 192.168.10.0 255.255.255.240
+default-router 192.168.10.1
+dns-server 192.168.10.12
+
+**soporte_tecnico**
+ip dhcp pool soporte_tecnico
+network 192.168.10.16 255.255.255.240
+default-router 192.168.10.17
+dns-server 192.168.10.12
+
+**ventas_marketing**
+ip dhcp pool ventas_marketing
+network 192.168.10.32 255.255.255.248
+default-router 192.168.10.33
+dns-server 192.168.10.12
+
+**servicios_generales**
+ip dhcp pool servicios_generales
+network 192.168.10.40 255.255.255.248
+default-router 192.168.10.41
+dns-server 192.168.10.12
+
+**invitados_wifi**
+ip dhcp pool invitados_wifi
+network 192.168.10.48 255.255.255.240
+default-router 192.168.10.49
+dns-server 8.8.8.8
+
+
+--Habilitar enrutamiento VLAN--
+ip routing
+
+modo ena: wr
+
+--Guardar para que no se me despiche cuando lo cierre--
+copy running-config startup-config
+(después dar enter para confirmar)
+
+##SwitchCentral##
+
+ena 
+conf t
+
+--Configuración de las VLANs--
+vlan 10
+name administracion
+exit
+
+vlan 20
+name soporte_tecnico
+exit
+
+vlan 30
+name ventas_marketing
+exit
+
+vlan 40
+name servicios_generales
+exit
+
+vlan 50
+name invitados_wifi
+exit
+
+--Configuración de puertos troncales--
+(SwitchCentral a RouterCentral)
+int GigabitEthernet0/1
+switchport mode trunk
+switchport trunk allowed vlan all
+no shutdown
+exit
+
+(SwitchCentral a los departamentos)
+int range FastEthernet0/1 - 4
+switchport mode trunk
+switchport trunk allowed vlan all
+no shutdown
+exit
+
+wr
+exit
+
+
+##administración (switch de administracion)##
+ena 
+conf t
+
+vlan 10
+name administracion
+exit
+
+int range fa0/1 - 14
+switchport mode access
+switchport access vlan 10
+no shutdown
+exit
+
+--Conexión con los demás switches--
+int fa0/24
+switchport mode trunk
+switchport trunk allowed vlan all
+no shutdown
+exit
+
+ena: wr
+
+
+##soporte_tecnico (switch de soporte_tecnico)##
+ena 
+conf t
+
+vlan 20
+name soporte_tecnico
+exit
+
+int range fa0/1 - 10
+switchport mode access
+switchport access vlan 20
+no shutdown
+exit
+
+--Conexión con los demás switches--
+int fa0/24
+switchport mode trunk
+switchport trunk allowed vlan all
+no shutdown
+exit
+
+ena: wr
+##ventas_marketing (switch de ventas_marketing)##
+vlan 30
+name ventas_marketing
+exit
+
+int range fa0/1 - 10
+switchport mode access
+switchport access vlan 30
+no shutdown
+exit
+
+--Conexión con los demás switches--
+int fa0/24
+switchport mode trunk
+switchport trunk allowed vlan all
+no shutdown
+exit
+
+ena: wr
+
+##servicios_generales (switch para servicios_generales)##
+vlan 40
+name servicios_generales
+exit
+
+
+int range fa0/1 - 6
+switchport mode access
+switchport access vlan 40
+no shutdown
+exit
+
+--Conexión con los demás switches--
+int fa0/24
+switchport mode trunk
+switchport trunk allowed vlan all
+no shutdown
+exit
+
+ena: wr
+
+##invitados_wifi (switchcentral Fa0/5)
+int FastEthernet0/5
+switchport mode access
+switchport access vlan 50
+no shut
+exit
+
+end
+wr
+
+##configuración subinterfaces NAT##
+--Se configuran en el router central--
+ip routing
+
+int GigabitEthernet0/0.10
+encapsulation dot1q 10
+ip address 192.168.10.1 255.255.255.240
+ip nat inside
+no shutdown
+exit
+
+int GigabitEthernet0/0.20
+encapsulation dot1q 20
+ip address 192.168.10.17 255.255.255.240
+ip nat inside
+no shutdown
+exit
+
+int GigabitEthernet0/0.30
+encapsulation dot1q 30
+ip address 192.168.10.33 255.255.255.248
+ip nat inside
+no shutdown
+exit
+
+int GigabitEthernet0/0.40
+encapsulation dot1q 40
+ip address 192.168.10.41 255.255.255.248
+ip nat inside
+no shutdown
+exit
+
+int GigabitEthernet0/0.50
+encapsulation dot1q 50
+ip address 192.168.10.49 255.255.255.240
+ip nat inside
+no shutdown
+exit
+
+--NAT Outside--
+int GigabitEthernet0/1
+ip address 200.200.200.2 255.255.255.252
+ip nat outside 
+no shutdown
+exit
+
+--Crear una ACL que incluya todos los rangos internos (192.168.10.0 a 192.168.10.63)--
+access-list 1 permit 192.168.10.0 0.0.0.63
+
+--NAT Overload--
+ip nat inside source list 1 interface GigabitEthernet0/1 overload
+
+end
+wr
+
+
+--Configuración de los puertos del switch central para los ap--
+int FastEthernet0/5
+switchport mode access 
+switchport access vlan 50
+no shut
+exit
+
+int FastEthernet0/6
+switchport mode access 
+switchport access vlan 10
+no shut
+exit
+
+int FastEthernet0/7
+switchport mode access 
+switchport access vlan 20
+no shut
+exit
+
+int FastEthernet0/8
+switchport mode access 
+switchport access vlan 30
+no shut
+exit
+
+int FastEthernet0/9
+switchport mode access 
+switchport access vlan 40
+no shut
+exit
+
+
+
+##SERVIDORES##
+
+--Servidor DNS--
+Sever-PT
+Static
+
+IP: 192.168.10.13
+Mascara: 255.255.255.240
+Def Gateway: 192.168.10.1
+DNS: 192.168.10.12
+
+--Servidor Correo/Web--
+Server-PT
+
+IP192.168.10.12
+Mascara: 168.162.10.12
+Def Gateway: 192.168.10.1
+DNS: 192.168.10.12
+
+##CONFIGURACION DEL FIREWALL BÁSICO. Esto va en el RouterCentral##
+--ACL PARA SERVIDORES:--
+
+**Servidor de ActiveDirectory**
+access-list 110 permit tcp any host 192.168.10.12 eq 53
+access-list 110 permit udp any host 192.168.10.12 eq 53
+access-list 110 permit tcp any host 192.168.10.12 eq 389
+access-list 110 permit tcp any host 192.168.10.12 eq 88
+
+**Servidor de Correo/Web**
+access-list 110 permit tcp any host 192.168.10.13 eq 80
+access-list 110 permit tcp any host 192.168.10.13 eq 443
+access-list 110 permit tcp any host 192.168.10.13 eq 25
+access-list 110 permit tcp any host 192.168.10.13 eq 110
+access-list 110 permit tcp any host 192.168.10.13 eq 143
+
+--Ping de diagnósticos a los servidores--
+access-list 110 permit icmp any host 192.168.10.12 echo
+access-list 110 permit icmp any host 192.168.10.13 echo
+
+--Denegar el resto del tráfico a los servidores--
+access-list 110 deny ip any host 192.168.10.12
+access-list 110 deny ip any host 192.168.10.13
+
+--Permitir el resto del tráfico--
+access-list 110 permit ip any any
+
+--ACL para cada uno de los departamentos--
+access-list 120 remark CTRL-TRAF-VLANS
+
+--Admin acc otras VLANS--
+access-list 120 permit ip 192.168.10.0 0.0.0.15 192.168.10.0 0.0.0.255
+
+--Soporte acc otras VLANS--
+access-list 120 permit ip 192.168.10.16 0.0.0.15 192.168.10.0 0.0.0.255
+
+--VentasM a servidores y wifi--
+access-list 120 permit ip 192.168.10.32 0.0.0.7 host 192.168.10.12
+access-list 120 permit ip 192.168.10.32 0.0.0.7 host 192.168.10.13
+access-list 120 permit ip 192.168.10.32 0.0.0.7 any
+
+--Servicios generales con acc lim--
+access-list 120 permit ip 192.168.10.40 0.0.0.7 host 192.168.10.12
+access-list 120 permit ip 192.168.10.40 0.0.0.7 host 192.168.10.13
+access-list 120 deny ip 192.168.10.40 0.0.0.7 192.168.10.0 0.0.0.255
+access-list 120 permit ip 192.168.10.40 0.0.0.7 any
+
+
+--CTRL trafico desde wifi--
+access-list 130 remark PROTEC-DESDE-WIFI
+
+--Denegar el trafico no solicitado-- **Exceptuando lo permitido por la NAT**
+access-list 130 deny ip any 192.168.10.0 0.0.0.255
+
+--Permitir trafico de retorno con las conexiones establecidas--
+access-list 130 permit tcp any 192.168.10.0 0.0.0.255 established
+
+--Permitir trafico de NAT--
+access-list 130 permit ip any any
+
+--Aplicar ACL trafico VLANs--
+
+int GigabitEthernet0/0.10
+ip access-group 120 in
+ip access-group 110 out
+
+int GigabitEthernet0/0.20
+ip access-group 120 in
+ip access-group 110 out
+
+int GigabitEthernet0/0.30
+ip access-group 120 in
+ip access-group 110 out
+
+int GigabitEthernet0/0.40
+ip access-group 120 in
+ip access-group 110 out
+
+int GigabitEthernet0/0.50
+ip access-group 120 in
+ip access-group 110 out
+
+int GigabitEthernet0/1
+ip access-group 130 in
+
+end
+wr
+
+
+
